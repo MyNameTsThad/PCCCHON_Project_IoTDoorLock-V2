@@ -2,13 +2,11 @@
 #include <WiFiClient.h>
 #include "BlynkEdgent.h"
 
-#include <TridentTD_LineNotify.h>
 #include <SPI.h>
 #include <MFRC522.h>
 
 #define SSID "Watcharapong_2.4G"
 #define PASSWORD "0868190813"
-#define LINE_TOKEN "sqoMuQgWidkbMVWFlha4FvgEcCxgoW3fwAjaWE2I2HD"
 #define LED_RED D0
 #define LED_GREEN D1
 #define LOCK D2
@@ -18,7 +16,9 @@
 #define BLYNK_DEVICE_NAME "<BLYNK_DEVICE_NAME>" //define this
 #define BLYNK_AUTH_TOKEN "<BLYNK_AUTH_TOKEN>" //define this
 #define BLYNK_FIRMWARE_VERSION "0.1.0" //maybe this too idk
-#define USE_WROVER_BOARD //maybe this too idk
+
+#define BLYNK_PRINT Serial
+#define USE_NODE_MCU_BOARD
 
 constexpr uint8_t RST_PIN = D3; // Configurable, see typical pin layout above
 constexpr uint8_t SS_PIN = D4;  // Configurable, see typical pin layout above
@@ -51,8 +51,6 @@ void setup()
 	Serial.printf("\nWiFi connected\nIP : ");
 	Serial.println(WiFi.localIP());
 	Serial.println(LINE.getVersion());
-
-	LINE.setToken(LINE_TOKEN);
 }
 
 BLYNK_WRITE(VP_LOCK){
@@ -81,7 +79,6 @@ void loop()
 		if ((tag == "991272462") || (tag == "2811520233"))
 		{
 			Serial.println("Access Granted!");
-			LINE.notify("Door unlocked");
 			digitalWrite(LOCK, HIGH);
 			Blynk.virtualWrite(VP_LOCK, 1);
 			for (byte j = 0; j < 3; j++)
@@ -98,7 +95,6 @@ void loop()
 		else
 		{
 			Serial.println("Access Denied!");
-			LINE.notify("Wrong card detected");
 			for (byte j = 0; j < 3; j++)
 			{
 				digitalWrite(LED_RED, HIGH);
