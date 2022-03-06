@@ -3,12 +3,8 @@
 
 ---
 
-aomsin just ditched this code and made his own, so he is now (in my eyes) a waste of time.
+aomsin just ditched this code and made his own smh
 
-update: he just said this wont work, but i dont care, and i didnt ask. shut your stupid, useless mouth aomsin.
+update: he just said this wont work, but i dont care, and i didnt ask. shut up. 
 
-also im gonna put these two repos down in the depths of this github profile and just leave them there, never to be dug up again.
-
----
-
-My condolences to anyone else reading this.
+update 2: code works now
