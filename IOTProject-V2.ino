@@ -7,7 +7,9 @@
 #define LED_RED D0
 #define LED_GREEN D1
 #define LOCK D2
-#define VPIN V0
+
+#define VPIN1 V0
+#define VPIN2 V1
 
 #define BLYNK_FIRMWARE_VERSION "0.1.0"
 
@@ -25,20 +27,27 @@
 #include "BlynkEdgent.h"
 
 int doorState = 0;
+int cardState = 0;
 BLYNK_CONNECTED()
 {
-	Blynk.syncVirtual(VPIN);
+	Blynk.syncVirtual(VPIN1);
+	Blynk.syncVirtual(VPIN2);
 }
-BLYNK_WRITE(V0)
+BLYNK_WRITE(VPIN1)
 {
 	doorState = param.asInt();
+}
+BLYNK_WRITE(VPIN2)
+{
+	cardState = param.asInt();
 }
 
 constexpr uint8_t RST_PIN = D3; // Configurable, see typical pin layout above
 constexpr uint8_t SS_PIN = D4;	// Configurable, see typical pin layout above
 MFRC522 rfid(SS_PIN, RST_PIN);	// Instance of the class
 MFRC522::MIFARE_Key key;
-String tag;
+
+String tags[20];
 
 void setup()
 {
@@ -70,52 +79,99 @@ void loop()
 	}
 	if (!rfid.PICC_IsNewCardPresent())
 		return;
-	if (rfid.PICC_ReadCardSerial())
+
+	if (rfid.PICC_ReadCardSerial() && cardState != 3)
 	{
+		String currentTag;
 		for (byte i = 0; i < 4; i++)
 		{
-			tag += rfid.uid.uidByte[i];
-			Serial.println(tag);
+			currentTag += rfid.uid.uidByte[i];
+			Serial.println(currentTag);
 		}
-		if ((tag == "991272462") || (tag == "2811520233"))
+
+		bool isFound = false;
+		for (uint8_t i = 0; i < sizeof(tags); i++)
+		{
+			if (currentTag == tags[i])
+			{
+				isFound = true;
+				Serial.println("Card = " + currentTag);
+				break;
+			}
+		}
+
+		if (isFound)
 		{
 			Serial.println("Access Granted!");
 			digitalWrite(LOCK, HIGH);
 			digitalWrite(LED_GREEN, HIGH);
 			Blynk.logEvent("lock_notification", "Door unlocked");
+			Blynk.virtualWrite(VPIN2, 1);
+			Blynk.setProperty(VPIN2, "label", "CARD REGISTERED");
+
 			delay(100);
 			digitalWrite(LED_GREEN, LOW);
-			delay(100);
-			digitalWrite(LED_GREEN, HIGH);
-			delay(100);
-			digitalWrite(LED_GREEN, LOW);
-			delay(100);
-			digitalWrite(LED_GREEN, HIGH);
-			delay(100);
-			digitalWrite(LED_GREEN, LOW);
+			for (byte i = 0; i < 2; i++)
+			{
+				delay(100);
+				digitalWrite(LED_GREEN, HIGH);
+				delay(100);
+				digitalWrite(LED_GREEN, LOW);
+			}
 			delay(4500);
 			digitalWrite(LOCK, LOW);
+			Blynk.virtualWrite(VPIN2, 0);
+			Blynk.setProperty(VPIN2, "label", "IDLE");
 		}
 		else
 		{
 			Serial.println("Access Denied!");
 			Blynk.logEvent("wrong_rfid", "Wrong card detected");
-			digitalWrite(LED_RED, HIGH);
-			delay(100);
-			digitalWrite(LED_RED, LOW);
-			delay(100);
-			digitalWrite(LED_RED, HIGH);
-			delay(100);
-			digitalWrite(LED_RED, LOW);
-			delay(100);
-			digitalWrite(LED_RED, HIGH);
-			delay(100);
-			digitalWrite(LED_RED, LOW);
-			delay(100);
+			Blynk.virtualWrite(VPIN2, 2);
+			Blynk.setProperty(VPIN2, "label", "UNKNOWN CARD");
+
+			for (byte i = 0; i < 3; i++)
+			{
+				digitalWrite(LED_RED, HIGH);
+				delay(100);
+				digitalWrite(LED_RED, LOW);
+				delay(100);
+			}
+
+			Blynk.virtualWrite(VPIN2, 0);
+			Blynk.setProperty(VPIN2, "label", "IDLE");
 		}
 
-		tag = "";
+		currentTag = "";
 		rfid.PICC_HaltA();
 		rfid.PCD_StopCrypto1();
+	}
+	else if (rfid.PICC_ReadCardSerial() && cardState == 3)
+	{
+		// edit mode
+		Blynk.setProperty(VPIN2, "label", "EDIT MODE");
+		String currentTag;
+		for (byte i = 0; i < 4; i++)
+		{
+			currentTag += rfid.uid.uidByte[i];
+			Serial.println(currentTag);
+		}
+		bool isFound = false;
+		// check if the card is already in the list, remove it. if not, add it.
+		for (uint8_t i = 0; i < sizeof(tags); i++)
+		{
+			if (currentTag == tags[i])
+			{
+				for (uint8_t j = i; j < sizeof(tags); ++j)
+					tags[j] = tags[j + 1];
+				Serial.println("Card Removed: " + currentTag);
+				isFound = true;
+			}
+		}
+		if (!isFound)
+		{
+			tags[sizeof(tags)] = currentTag;
+			Serial.println("Card Added: " + currentTag);
+		}
 	}
 }
