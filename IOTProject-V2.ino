@@ -47,7 +47,7 @@ constexpr uint8_t SS_PIN = D4;	// Configurable, see typical pin layout above
 MFRC522 rfid(SS_PIN, RST_PIN);	// Instance of the class
 MFRC522::MIFARE_Key key;
 
-String tags[20];
+String tag = "991272462";
 
 void setup()
 {
@@ -67,6 +67,7 @@ void setup()
 void loop()
 {
 	BlynkEdgent.run();
+	// Serial.println(cardState);
 	if (doorState == 1)
 	{
 		digitalWrite(LOCK, HIGH);
@@ -90,14 +91,9 @@ void loop()
 		}
 
 		bool isFound = false;
-		for (uint8_t i = 0; i < sizeof(tags); i++)
+		if (currentTag == tag)
 		{
-			if (currentTag == tags[i])
-			{
-				isFound = true;
-				Serial.println("Card = " + currentTag);
-				break;
-			}
+			isFound = true;
 		}
 
 		if (isFound)
@@ -108,6 +104,8 @@ void loop()
 			Blynk.logEvent("lock_notification", "Door unlocked");
 			Blynk.virtualWrite(VPIN2, 1);
 			Blynk.setProperty(VPIN2, "label", "CARD REGISTERED");
+			Serial.println(tag);
+			Serial.println(currentTag);
 
 			delay(100);
 			digitalWrite(LED_GREEN, LOW);
@@ -118,7 +116,7 @@ void loop()
 				delay(100);
 				digitalWrite(LED_GREEN, LOW);
 			}
-			delay(4500);
+			delay(10000);
 			digitalWrite(LOCK, LOW);
 			Blynk.virtualWrite(VPIN2, 0);
 			Blynk.setProperty(VPIN2, "label", "IDLE");
@@ -129,6 +127,8 @@ void loop()
 			Blynk.logEvent("wrong_rfid", "Wrong card detected");
 			Blynk.virtualWrite(VPIN2, 2);
 			Blynk.setProperty(VPIN2, "label", "UNKNOWN CARD");
+			Serial.println(tag);
+			Serial.println(currentTag);
 
 			for (byte i = 0; i < 3; i++)
 			{
@@ -146,32 +146,27 @@ void loop()
 		rfid.PICC_HaltA();
 		rfid.PCD_StopCrypto1();
 	}
-	else if (rfid.PICC_ReadCardSerial() && cardState == 3)
-	{
-		// edit mode
-		Blynk.setProperty(VPIN2, "label", "EDIT MODE");
-		String currentTag;
-		for (byte i = 0; i < 4; i++)
-		{
-			currentTag += rfid.uid.uidByte[i];
-			Serial.println(currentTag);
-		}
-		bool isFound = false;
-		// check if the card is already in the list, remove it. if not, add it.
-		for (uint8_t i = 0; i < sizeof(tags); i++)
-		{
-			if (currentTag == tags[i])
-			{
-				for (uint8_t j = i; j < sizeof(tags); ++j)
-					tags[j] = tags[j + 1];
-				Serial.println("Card Removed: " + currentTag);
-				isFound = true;
-			}
-		}
-		if (!isFound)
-		{
-			tags[sizeof(tags)] = currentTag;
-			Serial.println("Card Added: " + currentTag);
-		}
-	}
+	//	else if (rfid.PICC_ReadCardSerial() && (cardState == 3))
+	//	{
+	//		// edit mode
+	//    Serial.println(cardState);
+	//		Blynk.setProperty(VPIN2, "label", "EDIT MODE");
+	//    Serial.println("EDIT MODE");
+	//
+	//		String currentTag;
+	//		for (byte i = 0; i < 4; i++)
+	//		{
+	//			currentTag += rfid.uid.uidByte[i];
+	//			Serial.println(currentTag);
+	//	 	}
+	//    Serial.println(currentTag);
+	//		tag = currentTag;
+	//    digitalWrite(LED_RED, HIGH);
+	//    digitalWrite(LED_GREEN, HIGH);
+	//    delay(100);
+	//    digitalWrite(LED_RED, LOW);
+	//    digitalWrite(LED_GREEN, LOW);
+	//    delay(100);
+	//    Serial.println(tag);
+	//	}
 }
