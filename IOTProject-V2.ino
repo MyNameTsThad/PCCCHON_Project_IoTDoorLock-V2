@@ -119,7 +119,6 @@ void loop()
 			while (millis() - previousMillis < 100)
 				;
 			digitalWrite(LED_GREEN, LOW);
-			Serial.println("green low");
 			while (millis() - previousMillis < 100)
 				;
 			digitalWrite(LED_GREEN, HIGH);
@@ -132,13 +131,13 @@ void loop()
 			digitalWrite(LED_GREEN, HIGH);
 			while (millis() - previousMillis < 100)
 				;
-			digitalWrite(LED_GREEN, LOW);
 			yield();
 			ESP.wdtDisable();
 			while (millis() - previousMillis < 4500)
 				;
 			ESP.wdtEnable(WDTO_8S);
 			ESP.wdtFeed();
+			digitalWrite(LED_GREEN, LOW);
 			// delay(4500);
 			Serial.println("green low");
 			digitalWrite(LOCK, LOW);
